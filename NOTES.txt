@@ -1,0 +1,13 @@
+
+TODO: 
+    - add web socket client to game
+    - add web socket server to server
+    - POC communication
+    - decide how to model the game state
+    - poc syncing game state for players to see each others positions
+
+
+build and run commands:
+
+docker build -t flask-tutorial:latest .
+docker run -d -p 5000:5000 flask-tutorial
