@@ -1,23 +1,33 @@
-from flask import Flask
-from flask_socketio import SocketIO, emit
+import asyncio
+from websockets import serve
+import logging
 
-app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+logging.basicConfig(
+    format="%(asctime)s %(message)s",
+    level=logging.INFO,
+)
 
+class LoggerAdapter(logging.LoggerAdapter):
+    """Add connection ID and client IP address to websockets logs."""
+    def process(self, msg, kwargs):
+        try:
+            websocket = kwargs["extra"]["websocket"]
+        except KeyError:
+            return msg, kwargs
+        xff = websocket.request_headers.get("X-Forwarded-For")
+        return f"{websocket.id} {xff} {msg}", kwargs
 
-@app.route("/")
-def hello_world():
-    return "hello, world!"
+async def echo(websocket, path):
+    async for message in websocket:
+        await websocket.send(message)
 
-@socketio.on('connect')
-def test_connect():
-	print('connected')
-	emit('my response', {'data': 'Connected'})
+async def main():
+    async with serve(
+		echo, 
+		host="0.0.0.0", 
+		port=5000, 
+		logger=LoggerAdapter(logging.getLogger("websockets.server"))
+	):
+        await asyncio.Future()
 
-@socketio.on('disconnect')
-def test_disconnect():
-	print('Client disconnected')
-
-
-if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+asyncio.run(main())

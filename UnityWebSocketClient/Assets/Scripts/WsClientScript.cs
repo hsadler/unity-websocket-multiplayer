@@ -11,7 +11,7 @@ public class WsClientScript : MonoBehaviour
         ws.Connect();
         ws.OnMessage += (sender, e) =>
         {
-            Debug.Log("Message Received from "+((WebSocket)sender).Url+", Data : "+e.Data);
+            Debug.Log("Message Received from " + ((WebSocket)sender).Url + ", Data : " + e.Data);
         };
     }
 

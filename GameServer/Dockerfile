@@ -1,5 +1,5 @@
 # parent image
-FROM python:3.6-alpine
+FROM python:3.10-alpine
 
 # OS installs
 RUN apk add --no-cache \
