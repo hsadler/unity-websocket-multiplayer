@@ -1,12 +1,13 @@
 import asyncio
 from websockets import serve
+import json
 import logging
+
 
 logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.INFO,
 )
-
 class LoggerAdapter(logging.LoggerAdapter):
     """Add connection ID and client IP address to websockets logs."""
     def process(self, msg, kwargs):
@@ -17,18 +18,40 @@ class LoggerAdapter(logging.LoggerAdapter):
         xff = websocket.request_headers.get("X-Forwarded-For")
         return f"{websocket.id} {xff} {msg}", kwargs
 
-async def echo(websocket, path):
+
+class GameState():
+    def __init__(self):
+        self.connections = set()
+        self.players = []
+    def get_api_formatted_data(self):
+        return json.dumps(self.players)
+
+class Player():
+    def __init__(self):
+        self.position = Position()
+        self.size = 1
+
+class Position():
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+
+state = GameState()
+
+async def game_handler(websocket, path):
+    state.connections.add(websocket)
+    logging.info('path: ' + path)
     async for message in websocket:
-        logging.info('message: ' + message)
-        await websocket.send(message)
+        pass
 
 async def main():
     async with serve(
-		echo, 
+		game_handler, 
 		host="0.0.0.0", 
 		port=5000, 
 		logger=LoggerAdapter(logging.getLogger("websockets.server"))
 	):
         await asyncio.Future()
+
 
 asyncio.run(main())

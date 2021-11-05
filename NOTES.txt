@@ -1,8 +1,19 @@
 
 TODO: 
-    - add web socket client to game
-    - add web socket server to server
-    - POC communication
-    - decide how to model the game state
+    X add web socket client to game
+    X add web socket server to server
+    X POC communication
+    X decide how to model the game state:
+        state {
+            players: [
+                {
+                    size: <int>,
+                    position: {
+                        x: <float>,
+                        y: <float>
+                    }
+                }, ...
+            ]
+        }
     - poc syncing game state for players to see each others positions
 

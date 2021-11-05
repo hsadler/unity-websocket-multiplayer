@@ -7,9 +7,9 @@ public class WsClientScript : MonoBehaviour
     
     private void Start()
     {
-        ws = new WebSocket("ws://localhost:5000");
-        ws.Connect();
-        ws.OnMessage += (sender, e) =>
+        this.ws = new WebSocket("ws://localhost:5000");
+        this.ws.Connect();
+        this.ws.OnMessage += (sender, e) =>
         {
             Debug.Log("Message Received from " + ((WebSocket)sender).Url + ", Data : " + e.Data);
         };
@@ -17,19 +17,19 @@ public class WsClientScript : MonoBehaviour
 
     private void Update()
     {
-        if(ws == null)
+        if(this.ws == null)
         {
             return;
         }
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            ws.Send("Hello");
+            this.ws.Send("Hello");
         }  
     }
 
     private void OnDestroy()
     {
-        ws.Close(CloseStatusCode.Normal);
+        this.ws.Close(CloseStatusCode.Normal);
     }
 
 }
