@@ -1,16 +1,11 @@
-# parent image
 FROM python:3.10-alpine
 
-# OS installs
 RUN apk add --no-cache \
     bash \
     build-base
 
-COPY . /app
+COPY . /gameserver
 
-WORKDIR /app
+WORKDIR /gameserver
 
-RUN pip install -r /app/requirements.txt
-
-ENTRYPOINT ["python"]
-CMD ["server.py"]
+RUN pip install -r /gameserver/requirements.txt

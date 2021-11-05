@@ -27,4 +27,9 @@ public class WsClientScript : MonoBehaviour
         }  
     }
 
+    private void OnDestroy()
+    {
+        ws.Close(CloseStatusCode.Normal);
+    }
+
 }

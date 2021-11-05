@@ -19,6 +19,7 @@ class LoggerAdapter(logging.LoggerAdapter):
 
 async def echo(websocket, path):
     async for message in websocket:
+        logging.info('message: ' + message)
         await websocket.send(message)
 
 async def main():

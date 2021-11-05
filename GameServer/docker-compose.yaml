@@ -1,0 +1,16 @@
+
+version: '3'
+
+services:
+  gameserver:
+    build:
+      context: .
+      dockerfile: 'Dockerfile'
+    image: gameserver:latest
+    container_name: gameserver
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/gameserver
+    command: 'python server.py'
