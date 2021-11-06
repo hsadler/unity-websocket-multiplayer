@@ -23,7 +23,7 @@ class LoggerAdapter(logging.LoggerAdapter):
         return f"{websocket.id} {xff} {msg}", kwargs
 
 
-### GAME STATE AND OBJECTS ###
+### GAME STATE ###
 
 class GameState():
     def __init__(self):
@@ -77,45 +77,73 @@ class Position():
 state = GameState()
 
 
-### EVENT HANDLING ###
+### MESSAGES ###
 
-EVENT_TYPE_ENTER_PLAYER = 'EVENT_TYPE_ENTER_PLAYER'
-EVENT_TYPE_EXIT_PLAYER = 'EVENT_TYPE_EXIT_PLAYER'
-EVENT_TYPE_GAME_STATE = 'EVENT_TYPE_GAME_STATE'
+SERVER_MESSAGE_TYPE_ENTER_PLAYER = 'SERVER_MESSAGE_TYPE_ENTER_PLAYER'
+SERVER_MESSAGE_TYPE_EXIT_PLAYER = 'SERVER_MESSAGE_TYPE_EXIT_PLAYER'
+SERVER_MESSAGE_TYPE_PLAYER_UPDATE = 'SERVER_MESSAGE_TYPE_PLAYER_UPDATE'
+SERVER_MESSAGE_TYPE_GAME_STATE = 'SERVER_MESSAGE_TYPE_GAME_STATE'
 
-def enter_player_event(player):
+CLIENT_MESSAGE_TYPE_PLAYER_UPDATE = 'CLIENT_MESSAGE_TYPE_PLAYER_UPDATE'
+CLIENT_MESSAGE_TYPE_GET_GAME_STATE = 'CLIENT_MESSAGE_TYPE_GET_GAME_STATE'
+
+def enter_player_message(player):
     return json.dumps({
-        'type': EVENT_TYPE_ENTER_PLAYER,
+        'type': SERVER_MESSAGE_TYPE_ENTER_PLAYER,
         'player': player.to_dict()
     })
 
-def exit_player_event(player):
+def exit_player_message(player):
     return json.dumps({
-        'type': EVENT_TYPE_EXIT_PLAYER,
+        'type': SERVER_MESSAGE_TYPE_EXIT_PLAYER,
         'player': player.to_dict()
     })
 
-def game_state_event(state):
+def player_update_message(player):
     return json.dumps({
-        'type': EVENT_TYPE_GAME_STATE,
+        'type': SERVER_MESSAGE_TYPE_PLAYER_UPDATE,
+        'player': player.to_dict()
+    })
+
+def game_state_message(state):
+    return json.dumps({
+        'type': SERVER_MESSAGE_TYPE_GAME_STATE,
         'state': state.to_dict()
     })
 
-async def game_handler(websocket, path):
+
+### API HANDLERS ###
+
+def route_message(message):
+    message_type_to_handler = {
+        CLIENT_MESSAGE_TYPE_PLAYER_UPDATE: handle_get_game_state,
+        CLIENT_MESSAGE_TYPE_GET_GAME_STATE: handle_get_game_state
+    }
+    message = json.loads(message)
+    if message['type'] in message_type_to_handler:
+        message_type_to_handler[message['type']](message)
+
+def handle_player_update(message):
+    pass
+
+def handle_get_game_state(message):
+    pass
+
+async def handle_websocket(websocket, path):
     try:
         player = Player(websocket=websocket)
         state.add_player(player=player, websocket=websocket)
-        websockets.broadcast(state.connections, enter_player_event(player))
+        websockets.broadcast(state.connections, enter_player_message(player))
         logging.info('player entered: ' + json.dumps(player.to_dict()))
         logging.info('player count: ' + str(len(state.connections)))
         logging.info('game state: ' + json.dumps(state.to_dict()))
         async for message in websocket:
-            await websocket.send("hello: " + message)
+            route_message(message)
     finally:
         player = state.get_player_by_websocket(websocket)
         if player is not None:
             state.remove_player(player)
-            websockets.broadcast(state.connections, exit_player_event(player))
+            websockets.broadcast(state.connections, exit_player_message(player))
             logging.info('player exited: ' + json.dumps(player.to_dict()))
             logging.info('player count: ' + str(len(state.connections)))
             logging.info('game state: ' + json.dumps(state.to_dict()))
@@ -127,7 +155,7 @@ async def game_handler(websocket, path):
 
 async def main():
     async with websockets.serve(
-		game_handler, 
+		handle_websocket,
 		host="0.0.0.0", 
 		port=5000, 
 		logger=LoggerAdapter(logging.getLogger("websockets.server"))
