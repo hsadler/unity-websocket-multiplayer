@@ -4,16 +4,26 @@ TODO:
     X add web socket server to server
     X POC communication
     X decide how to model the game state:
-        state {
-            players: [
-                {
-                    size: <int>,
-                    position: {
-                        x: <float>,
-                        y: <float>
-                    }
-                }, ...
-            ]
-        }
     - poc syncing game state for players to see each others positions
 
+
+Game State Schema:
+{
+    players: [
+        {
+            id: <UUID_str>
+            size: <int>,
+            position: {
+                x: <float>,
+                y: <float>
+            }
+        }, ...
+    ]
+}
+
+
+Message Schema:
+{
+    type: <string>,
+    payload_key <string>: payload_value <any>
+}
