@@ -39,10 +39,16 @@ class Position():
 state = GameState()
 
 async def game_handler(websocket, path):
-    state.connections.add(websocket)
-    logging.info('path: ' + path)
-    async for message in websocket:
-        pass
+    try:
+        state.connections.add(websocket)
+        logging.info('added websocket: ' + str(websocket))
+        logging.info('total websockets: ' + str([str(x) for x in state.connections]))
+        async for message in websocket:
+            await websocket.send("hello: " + message)
+    finally:
+        state.connections.remove(websocket)
+        logging.info('removed websocket: ' + str(websocket))
+        logging.info('total websockets: ' + str([str(x) for x in state.connections]))
 
 async def main():
     async with serve(
