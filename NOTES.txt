@@ -12,7 +12,6 @@ Game State Schema:
     players: [
         {
             id: <UUID_str>
-            size: <int>,
             position: {
                 x: <float>,
                 y: <float>
@@ -24,6 +23,6 @@ Game State Schema:
 
 Message Schema:
 {
-    type: <string>,
+    messageType: <string>,
     payload_key <string>: payload_value <any>
 }

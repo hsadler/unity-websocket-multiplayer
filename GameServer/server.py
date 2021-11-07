@@ -54,14 +54,12 @@ class Player():
     def __init__(self, websocket):
         self.websocket = websocket
         self.id = str(uuid.uuid4().hex)
-        self.pos = Position()
-        self.size = 1
+        self.position = Position()
     def to_dict(self):
         return {
             'player_id': self.id,
             'websocket_id': str(self.websocket.id),
-            'pos': self.pos.to_dict(),
-            'size': self.size
+            'position': self.position.to_dict(),
         }
 
 class Position():
@@ -77,15 +75,12 @@ class Position():
 state = GameState()
 
 
-### MESSAGES ###
+### SERVER MESSAGES ###
 
 SERVER_MESSAGE_TYPE_ENTER_PLAYER = 'SERVER_MESSAGE_TYPE_ENTER_PLAYER'
 SERVER_MESSAGE_TYPE_EXIT_PLAYER = 'SERVER_MESSAGE_TYPE_EXIT_PLAYER'
 SERVER_MESSAGE_TYPE_PLAYER_UPDATE = 'SERVER_MESSAGE_TYPE_PLAYER_UPDATE'
 SERVER_MESSAGE_TYPE_GAME_STATE = 'SERVER_MESSAGE_TYPE_GAME_STATE'
-
-CLIENT_MESSAGE_TYPE_PLAYER_UPDATE = 'CLIENT_MESSAGE_TYPE_PLAYER_UPDATE'
-CLIENT_MESSAGE_TYPE_GET_GAME_STATE = 'CLIENT_MESSAGE_TYPE_GET_GAME_STATE'
 
 def enter_player_message(player):
     return json.dumps({
@@ -112,22 +107,28 @@ def game_state_message(state):
     })
 
 
-### API HANDLERS ###
+### CLIENT MESSAGE HANDLERS ###
+
+CLIENT_MESSAGE_TYPE_PLAYER_UPDATE = 'CLIENT_MESSAGE_TYPE_PLAYER_UPDATE'
+CLIENT_MESSAGE_TYPE_GET_GAME_STATE = 'CLIENT_MESSAGE_TYPE_GET_GAME_STATE'
 
 def route_message(message):
     message_type_to_handler = {
-        CLIENT_MESSAGE_TYPE_PLAYER_UPDATE: handle_get_game_state,
+        CLIENT_MESSAGE_TYPE_PLAYER_UPDATE: handle_player_update,
         CLIENT_MESSAGE_TYPE_GET_GAME_STATE: handle_get_game_state
     }
     message = json.loads(message)
-    if message['type'] in message_type_to_handler:
-        message_type_to_handler[message['type']](message)
+    if message['messageType'] in message_type_to_handler:
+        message_type_to_handler[message['messageType']](message)
 
 def handle_player_update(message):
     pass
 
 def handle_get_game_state(message):
     pass
+
+
+### RUN SERVER ###
 
 async def handle_websocket(websocket, path):
     try:
@@ -149,9 +150,6 @@ async def handle_websocket(websocket, path):
             logging.info('game state: ' + json.dumps(state.to_dict()))
         else:
             logging.warn('player not found by websocket id: ' + str(websocket.id))
-
-
-### RUN SERVER ###
 
 async def main():
     async with websockets.serve(
