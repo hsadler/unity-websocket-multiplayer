@@ -3,7 +3,9 @@ TODO:
     X add web socket client to game
     X add web socket server to server
     X POC communication
-    X decide how to model the game state:
+    X decide how to model the game state
+    X move game-client websocket handling to scene manager
+    - implement game-client handling of game-server messages
     - poc syncing game state for players to see each others positions
 
 
