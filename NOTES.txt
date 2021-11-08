@@ -5,7 +5,8 @@ TODO:
     X POC communication
     X decide how to model the game state
     X move game-client websocket handling to scene manager
-    - implement game-client handling of game-server messages
+    X implement game-client handling of game-server messages
+    - fix bugs
     - poc syncing game state for players to see each others positions
 
 

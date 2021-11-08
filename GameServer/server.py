@@ -82,9 +82,8 @@ state = GameState()
 
 ### SERVER MESSAGES ###
 
-SERVER_MESSAGE_TYPE_ENTER_PLAYER = 'SERVER_MESSAGE_TYPE_ENTER_PLAYER'
-SERVER_MESSAGE_TYPE_EXIT_PLAYER = 'SERVER_MESSAGE_TYPE_EXIT_PLAYER'
-SERVER_MESSAGE_TYPE_PLAYER_ID = 'SERVER_MESSAGE_TYPE_PLAYER_ID'
+SERVER_MESSAGE_TYPE_ENTER_PLAYER = 'SERVER_MESSAGE_TYPE_PLAYER_ENTER'
+SERVER_MESSAGE_TYPE_EXIT_PLAYER = 'SERVER_MESSAGE_TYPE_PLAYER_EXIT'
 SERVER_MESSAGE_TYPE_PLAYER_UPDATE = 'SERVER_MESSAGE_TYPE_PLAYER_UPDATE'
 SERVER_MESSAGE_TYPE_GAME_STATE = 'SERVER_MESSAGE_TYPE_GAME_STATE'
 
@@ -120,7 +119,6 @@ def game_state_message(state):
 CLIENT_MESSAGE_TYPE_PLAYER_ENTER = 'CLIENT_MESSAGE_TYPE_PLAYER_ENTER'
 CLIENT_MESSAGE_TYPE_PLAYER_EXIT = 'CLIENT_MESSAGE_TYPE_PLAYER_EXIT'
 CLIENT_MESSAGE_TYPE_PLAYER_UPDATE = 'CLIENT_MESSAGE_TYPE_PLAYER_UPDATE'
-CLIENT_MESSAGE_TYPE_GET_GAME_STATE = 'CLIENT_MESSAGE_TYPE_GET_GAME_STATE'
 
 async def route_message(message, websocket):
     logging.info('message received from game client: ' + message)
@@ -129,7 +127,6 @@ async def route_message(message, websocket):
         CLIENT_MESSAGE_TYPE_PLAYER_ENTER: handle_player_enter,
         CLIENT_MESSAGE_TYPE_PLAYER_EXIT: handle_player_exit,
         CLIENT_MESSAGE_TYPE_PLAYER_UPDATE: handle_player_update,
-        CLIENT_MESSAGE_TYPE_GET_GAME_STATE: handle_get_game_state
     }
     if message['messageType'] in message_type_to_handler:
         await message_type_to_handler[message['messageType']](message, websocket)
@@ -160,9 +157,6 @@ async def handle_player_update(message, websocket):
     player = state.get_player_by_websocket(websocket)
     player.position = new_player_position
     websockets.broadcast(state.connections, player_update_message(player))
-
-async def handle_get_game_state(message, websocket):
-    pass
 
 
 ### RUN SERVER ###

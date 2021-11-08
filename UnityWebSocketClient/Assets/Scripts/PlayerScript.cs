@@ -4,7 +4,9 @@ public class PlayerScript : MonoBehaviour
 {
 
     public SceneManagerScript sceneManager;
+    public bool isMainPlayer;
 
+    private SpriteRenderer sr;
     private float moveSpeed = 5f;
 
     // UNITY HOOKS
@@ -16,7 +18,13 @@ public class PlayerScript : MonoBehaviour
 
     void Update()
     {
-        this.HandleMovement();
+        if (this.isMainPlayer)
+        {
+            this.HandleMovement();
+        }
+        else {
+            this.sr.color = Color.red;
+        }
     }
 
     // IMPLEMENTATION METHODS
