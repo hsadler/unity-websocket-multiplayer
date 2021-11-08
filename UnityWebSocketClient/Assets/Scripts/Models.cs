@@ -6,7 +6,7 @@ public class GameState
 {
 
     public List<string> connectionIds;
-    public IDictionary<string, Player> playerIdToPlayer;
+    public List<Player> players;
 
 }
 

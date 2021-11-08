@@ -28,26 +28,22 @@ class LoggerAdapter(logging.LoggerAdapter):
 class GameState():
     def __init__(self):
         self.connections = set()
-        self.player_id_to_player = {}
+        self.players = set()
     def add_player(self, player, websocket):
-        self.player_id_to_player[player.id] = player
+        self.players.add(player)
         self.connections.add(websocket)
     def remove_player(self, player):
-        logging.info('removing player by id: ' + player.id)
         self.connections.remove(player.websocket)
-        del self.player_id_to_player[player.id]
+        self.players.remove(player)
     def get_player_by_websocket(self, websocket):
-        for player in self.player_id_to_player.values():
+        for player in self.players:
             if player.websocket is websocket:
                 return player
         return None
     def to_dict(self):
-        player_dict = {}
-        for id, player in self.player_id_to_player.items():
-            player_dict[id] = player.to_dict()
         return {
             'connectionIds': [str(c.id) for c in self.connections],
-            'playerIdToPlayer': player_dict
+            'players': [p.to_dict() for p in self.players]
         }
     
 class Player():
