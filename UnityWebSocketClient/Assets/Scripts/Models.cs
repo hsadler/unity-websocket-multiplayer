@@ -1,5 +1,14 @@
 ﻿using System;
-using UnityEngine;
+using System.Collections.Generic;
+
+[Serializable]
+public class GameState
+{
+
+    public List<string> connectionIds;
+    public IDictionary<string, Player> playerIdToPlayer;
+
+}
 
 [Serializable]
 public class Player

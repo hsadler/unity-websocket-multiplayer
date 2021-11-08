@@ -46,8 +46,8 @@ class GameState():
         for id, player in self.player_id_to_player.items():
             player_dict[id] = player.to_dict()
         return {
-            'connection_ids': [str(c.id) for c in self.connections],
-            'players': player_dict
+            'connectionIds': [str(c.id) for c in self.connections],
+            'playerIdToPlayer': player_dict
         }
     
 class Player():
@@ -64,7 +64,7 @@ class Player():
     def to_dict(self):
         return {
             'id': self.id,
-            'websocket_id': str(self.websocket.id),
+            'websocketId': str(self.websocket.id),
             'position': self.position.to_dict(),
         }
 
@@ -115,7 +115,7 @@ def player_update_message(player):
 def game_state_message(state):
     return json.dumps({
         'messageType': SERVER_MESSAGE_TYPE_GAME_STATE,
-        'state': state.to_dict()
+        'gameState': state.to_dict()
     })
 
 

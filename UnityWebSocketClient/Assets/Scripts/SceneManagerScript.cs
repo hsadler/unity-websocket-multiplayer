@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using WebSocketSharp;
@@ -48,7 +47,7 @@ public class SceneManagerScript : MonoBehaviour
             playerGO.transform.position.x,
             playerGO.transform.position.y
         );
-        var playerUpdateMessage = new PlayerUpdateMesssage(this.mainPlayerModel);
+        var playerUpdateMessage = new ClientMessagePlayerUpdate(this.mainPlayerModel);
         this.ws.Send(JsonUtility.ToJson(playerUpdateMessage));
     } 
 
@@ -74,20 +73,40 @@ public class SceneManagerScript : MonoBehaviour
         var pos = new Position(this.transform.position.x, this.transform.position.y);
         this.mainPlayerModel = new Player(uuid, pos);
         // send "player enter" message to server
-        var playerEnterMessage = new PlayerEnterMessage(this.mainPlayerModel);
+        var playerEnterMessage = new ClientMessagePlayerEnter(this.mainPlayerModel);
         this.ws.Send(JsonUtility.ToJson(playerEnterMessage));
     }
 
     private void HandleServerMessages(object sender, MessageEventArgs e)
     {
-        // TODO: implement message routing and handling
-        string messageType = JsonUtility.FromJson<GenericMessage>(e.Data).messageType;
+        // parse message type
+        string messageType = JsonUtility.FromJson<ServerMessageGeneric>(e.Data).messageType;
         Debug.Log("handling incoming message type: " + messageType);
+        // route message to handler based on message type
         if (messageType == SERVER_MESSAGE_TYPE_PLAYER_ENTER)
         {
-            var message = JsonUtility.FromJson<EnterPlayerMessage>(e.Data);
-            Debug.Log("enter player message received: " + JsonUtility.ToJson(message));
+            var message = JsonUtility.FromJson<ServerMessagePlayerEnter>(e.Data);
+            //Debug.Log("player enter message received: " + JsonUtility.ToJson(message));
         }
+        else if (messageType == SERVER_MESSAGE_TYPE_PLAYER_EXIT)
+        {
+            var message = JsonUtility.FromJson<ServerMessagePlayerExit>(e.Data);
+            //Debug.Log("player exit message received: " + JsonUtility.ToJson(message));
+        }
+        else if (messageType == SERVER_MESSAGE_TYPE_PLAYER_UPDATE)
+        {
+            var message = JsonUtility.FromJson<ServerMessagePlayerUpdate>(e.Data);
+            //Debug.Log("player update message received: " + JsonUtility.ToJson(message));
+        }
+        else if (messageType == SERVER_MESSAGE_TYPE_GAME_STATE)
+        {
+            this.HandleGameStateServerMessage(e.Data);
+        }
+    }
+
+    private void HandleGameStateServerMessage(string messageJSON) {
+        var message = JsonUtility.FromJson<ServerMessageGameState>(messageJSON);
+        Debug.Log("game state message received: " + JsonUtility.ToJson(message));
     }
 
 }

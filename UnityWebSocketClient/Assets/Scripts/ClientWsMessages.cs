@@ -1,13 +1,13 @@
 ﻿using System;
 
 [Serializable]
-public class PlayerEnterMessage
+public class ClientMessagePlayerEnter
 {
 
     public string messageType = "CLIENT_MESSAGE_TYPE_PLAYER_ENTER";
     public Player player;
 
-    public PlayerEnterMessage(Player playerModel)
+    public ClientMessagePlayerEnter(Player playerModel)
     {
         this.player = playerModel;
     }
@@ -15,13 +15,13 @@ public class PlayerEnterMessage
 }
 
 [Serializable]
-public class PlayerUpdateMesssage
+public class ClientMessagePlayerUpdate
 {
 
     public string messageType = "CLIENT_MESSAGE_TYPE_PLAYER_UPDATE";
     public Player player;
 
-    public PlayerUpdateMesssage(Player playerModel)
+    public ClientMessagePlayerUpdate(Player playerModel)
     {
         this.player = playerModel;
     }
@@ -29,7 +29,7 @@ public class PlayerUpdateMesssage
 }
 
 [Serializable]
-public class GetGameStateMessage
+public class ClientMessageGetGameState
 {
     public string messageType = "CLIENT_MESSAGE_TYPE_GET_GAME_STATE";
 }
