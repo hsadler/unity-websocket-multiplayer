@@ -30,7 +30,6 @@ public class ServerMessagePlayerUpdate
 [Serializable]
 public class ServerMessageGameState
 {
-    // TODO: implement stub class
     public string messageType;
     public GameState gameState;
 }

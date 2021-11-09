@@ -1,8 +1,6 @@
 import asyncio
-from os import stat
 import websockets
 import json
-import uuid
 import logging
 
 
@@ -92,7 +90,6 @@ def enter_player_message(player):
         'messageType': SERVER_MESSAGE_TYPE_ENTER_PLAYER,
         'player': player.to_dict()
     })
-    # logging.info("enter_player_message: " + json_payload)
     return json_payload
 
 def exit_player_message(player):
@@ -121,7 +118,6 @@ CLIENT_MESSAGE_TYPE_PLAYER_EXIT = 'CLIENT_MESSAGE_TYPE_PLAYER_EXIT'
 CLIENT_MESSAGE_TYPE_PLAYER_UPDATE = 'CLIENT_MESSAGE_TYPE_PLAYER_UPDATE'
 
 async def route_message(message, websocket):
-    logging.info('message received from game client: ' + message)
     message = json.loads(message)
     message_type_to_handler = {
         CLIENT_MESSAGE_TYPE_PLAYER_ENTER: handle_player_enter,
@@ -132,7 +128,6 @@ async def route_message(message, websocket):
         await message_type_to_handler[message['messageType']](message, websocket)
 
 async def handle_player_enter(message, websocket):
-    logging.info("handle_player_enter message received", message)
     player_dict = message['player']
     player = Player.from_dict(player_dict, websocket)
     state.add_player(player=player, websocket=websocket)
