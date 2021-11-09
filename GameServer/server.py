@@ -92,7 +92,7 @@ def enter_player_message(player):
         'messageType': SERVER_MESSAGE_TYPE_ENTER_PLAYER,
         'player': player.to_dict()
     })
-    logging.info("enter_player_message: " + json_payload)
+    # logging.info("enter_player_message: " + json_payload)
     return json_payload
 
 def exit_player_message(player):

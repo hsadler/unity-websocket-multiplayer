@@ -12,7 +12,10 @@ public class SceneManagerScript : MonoBehaviour
     private Player mainPlayerModel;
     private GameObject mainPlayerGO;
 
-    private IDictionary<string, GameObject> playerIdToOtherPlayerGO;
+    private IDictionary<string, GameObject> playerIdToOtherPlayerGO =
+            new Dictionary<string, GameObject>();
+
+    private Queue<string> gameServerMessageQueue = new Queue<string>();
 
     private const string SERVER_MESSAGE_TYPE_PLAYER_ENTER = "SERVER_MESSAGE_TYPE_PLAYER_ENTER";
     private const string SERVER_MESSAGE_TYPE_PLAYER_EXIT = "SERVER_MESSAGE_TYPE_PLAYER_EXIT";
@@ -29,7 +32,10 @@ public class SceneManagerScript : MonoBehaviour
 
     private void Update()
     {
-
+        // process all queued server messages
+        while (this.gameServerMessageQueue.Count > 0) {
+            this.HandleServerMessage(this.gameServerMessageQueue.Dequeue());
+        }
     }
 
     private void OnDestroy()
@@ -49,7 +55,7 @@ public class SceneManagerScript : MonoBehaviour
         );
         var playerUpdateMessage = new ClientMessagePlayerUpdate(this.mainPlayerModel);
         this.ws.Send(JsonUtility.ToJson(playerUpdateMessage));
-    } 
+    }
 
     // IMPLEMENTATION METHODS
 
@@ -59,7 +65,7 @@ public class SceneManagerScript : MonoBehaviour
         this.ws = new WebSocket("ws://localhost:5000");
         this.ws.Connect();
         // add message handler callback
-        this.ws.OnMessage += this.HandleServerMessages;
+        this.ws.OnMessage += this.QueueServerMessage;
     }
 
     private void InitMainPlayer()
@@ -79,27 +85,31 @@ public class SceneManagerScript : MonoBehaviour
         this.ws.Send(JsonUtility.ToJson(playerEnterMessage));
     }
 
-    private void HandleServerMessages(object sender, MessageEventArgs e)
+    private void QueueServerMessage(object sender, MessageEventArgs e) {
+        this.gameServerMessageQueue.Enqueue(e.Data);
+    }
+
+    private void HandleServerMessage(string messageJSON)
     {
         // parse message type
-        string messageType = JsonUtility.FromJson<ServerMessageGeneric>(e.Data).messageType;
+        string messageType = JsonUtility.FromJson<ServerMessageGeneric>(messageJSON).messageType;
         //Debug.Log("handling incoming message type: " + messageType);
         // route message to handler based on message type
         if (messageType == SERVER_MESSAGE_TYPE_PLAYER_ENTER)
         {
-            this.HandlePlayerEnterServerMessage(e.Data);
+            this.HandlePlayerEnterServerMessage(messageJSON);
         }
         else if (messageType == SERVER_MESSAGE_TYPE_PLAYER_EXIT)
         {
-            this.HandlePlayerExitServerMessage(e.Data);
+            this.HandlePlayerExitServerMessage(messageJSON);
         }
         else if (messageType == SERVER_MESSAGE_TYPE_PLAYER_UPDATE)
         {
-            this.HandlePlayerUpdateServerMessage(e.Data);
+            this.HandlePlayerUpdateServerMessage(messageJSON);
         }
         else if (messageType == SERVER_MESSAGE_TYPE_GAME_STATE)
         {
-            this.HandleGameStateServerMessage(e.Data);
+            this.HandleGameStateServerMessage(messageJSON);
         }
     }
 
@@ -144,7 +154,6 @@ public class SceneManagerScript : MonoBehaviour
         foreach (Player player in gameStateMessage.gameState.players) {
             this.AddOtherPlayerFromPlayerModel(player);   
         }
-
     }
 
     private void AddOtherPlayerFromPlayerModel(Player otherPlayerModel)

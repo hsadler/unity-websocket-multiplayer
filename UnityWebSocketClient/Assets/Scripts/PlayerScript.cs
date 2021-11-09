@@ -6,14 +6,16 @@ public class PlayerScript : MonoBehaviour
     public SceneManagerScript sceneManager;
     public bool isMainPlayer;
 
-    private SpriteRenderer sr;
     private float moveSpeed = 5f;
 
     // UNITY HOOKS
 
     void Start()
     {
-
+        if (!this.isMainPlayer)
+        {
+            this.gameObject.GetComponent<SpriteRenderer>().color = Color.red;
+        }
     }
 
     void Update()
@@ -21,9 +23,6 @@ public class PlayerScript : MonoBehaviour
         if (this.isMainPlayer)
         {
             this.HandleMovement();
-        }
-        else {
-            this.sr.color = Color.red;
         }
     }
 
