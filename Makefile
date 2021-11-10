@@ -1,6 +1,6 @@
 
 build:
-	cd GameServer && docker build -t game-server:latest .
+	docker build -t game-server:latest ./GameServer
 
 up:	
-	cd GameServer && docker-compose -f docker-compose.yaml up
+	docker-compose -f ./GameServer/docker-compose.yaml up

@@ -53,7 +53,6 @@ public class PlayerScript : MonoBehaviour
         }
         if (targetPos != this.transform.position)
         {
-            
             this.transform.position = Vector3.MoveTowards(
                 this.transform.position,
                 targetPos,
