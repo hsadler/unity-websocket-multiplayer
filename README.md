@@ -26,11 +26,11 @@ docker-compose -f ./GameServer/docker-compose.yaml up
 
 ### Notes
 
-This is a very simple proof of concept and could be used as a starting point for 
+This is a very simple proof-of-concept and could be used as a starting point for 
 making a multiplayer game with the Unity engine.
 
 It demonstrates game-client to game-server connection establishment, message 
-transmission/reception, and connection termination with the websocket protocol.
+transmission, and connection termination with the websocket protocol.
 
 The entire game-server's code resides in:
 `GameServer/server.py`
