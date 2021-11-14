@@ -13,12 +13,12 @@ POC for a Unity game client and python server with websockets!
 
 1. Build the python websocket server image
 ```sh
-docker build -t game-server:latest ./GameServer
+docker build -t game-server:latest ./PythonGameServer
 ```
 
 2. Spin-up the server
 ```sh
-docker-compose -f ./GameServer/docker-compose.yaml up
+docker-compose -f ./PythonGameServer/docker-compose.yaml up
 ```
 
 3. Open the Unity editor and run the game

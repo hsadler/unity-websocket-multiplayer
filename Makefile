@@ -1,6 +1,6 @@
 
-build:
-	docker build -t game-server:latest ./GameServer
+build-python-game-server:
+	docker build -t python-gameserver:latest ./PythonGameServer
 
-up:	
-	docker-compose -f ./GameServer/docker-compose.yaml up
+up-python-game-server:	
+	docker-compose -f ./PythonGameServer/docker-compose.yaml up

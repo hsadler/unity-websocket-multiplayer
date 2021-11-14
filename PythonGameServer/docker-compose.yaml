@@ -6,8 +6,8 @@ services:
     build:
       context: .
       dockerfile: 'Dockerfile'
-    image: gameserver:latest
-    container_name: gameserver
+    image: python-gameserver:latest
+    container_name: python-gameserver
     restart: always
     ports:
       - "5000:5000"
