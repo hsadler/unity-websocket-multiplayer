@@ -88,6 +88,7 @@ public class SceneManagerScript : MonoBehaviour
 
     private void QueueServerMessage(object sender, MessageEventArgs e) 
     {
+        Debug.Log("Server message received: " + e.Data);
         this.gameServerMessageQueue.Enqueue(e.Data);
     }
 

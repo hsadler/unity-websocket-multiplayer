@@ -9,11 +9,56 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var addr = flag.String("addr", "0.0.0.0:5000", "http service address")
+// TODO:
+// - add game state:
+//// - track connections
+//// - track player states
+// - add server message classes
+// - add client message handlers
+// - add routing of client messages to respective handler
+// - add ability to broadcast server message
 
-var upgrader = websocket.Upgrader{} // use default options
+type GameState struct {
+	connections []*websocket.Conn
+	players     []*Player
+}
+
+type Player struct {
+	websocket *websocket.Conn
+	id        string
+	position  *Position
+}
+
+type Position struct {
+	x float64
+	y float64
+}
+
+func handle_websocket(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{} // use default options
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Print("upgrade:", err)
+		return
+	}
+	defer conn.Close()
+	for {
+		mt, message, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("read:", err)
+			break
+		}
+		log.Printf("recv: %s", message)
+		err = conn.WriteMessage(mt, message)
+		if err != nil {
+			log.Println("write:", err)
+			break
+		}
+	}
+}
 
 func echo(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{} // use default options
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
@@ -42,8 +87,10 @@ func home(w http.ResponseWriter, r *http.Request) {
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
+	http.HandleFunc("/", handle_websocket)
 	http.HandleFunc("/echo", echo)
-	http.HandleFunc("/", home)
+	http.HandleFunc("/home", home)
+	addr := flag.String("addr", "0.0.0.0:5000", "http service address")
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
