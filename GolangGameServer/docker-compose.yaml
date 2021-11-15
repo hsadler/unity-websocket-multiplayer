@@ -1,0 +1,16 @@
+
+version: '3'
+
+services:
+  gameserver:
+    build:
+      context: .
+      dockerfile: 'Dockerfile'
+    image: golang-gameserver:latest
+    container_name: golang-gameserver
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/go/src
+    command: 'CompileDaemon --build="go build server.go" --command=./server'
