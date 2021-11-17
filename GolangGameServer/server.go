@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -19,23 +21,28 @@ import (
 
 ///////////////// GAME STATE /////////////////
 
+var state GameState = GameState{
+	WebsocketToPlayer: make(map[*websocket.Conn]*Player),
+}
+
 type GameState struct {
-	connections []*websocket.Conn
-	players     []*Player
+	WebsocketToPlayer map[*websocket.Conn]*Player
 }
 
-func (gs *GameState) add_player(player *Player, ws *websocket.Conn) {
-	gs.players = append(gs.players, player)
-	gs.connections = append(gs.connections, ws)
+func (gs *GameState) AddPlayer(player *Player, ws *websocket.Conn) {
+	gs.WebsocketToPlayer[ws] = player
 }
 
-func (gs *GameState) remove_player(player *Player) {
-	// stub
+func (gs *GameState) RemovePlayerByWebsocket(ws *websocket.Conn) {
+	delete(gs.WebsocketToPlayer, ws)
 }
 
-func (gs *GameState) find_player_by_websocket(ws *websocket.Conn) Player {
-	// stub
-	return Player{}
+func (gs *GameState) GetAllConnections() []*websocket.Conn {
+	var connections []*websocket.Conn
+	for ws := range gs.WebsocketToPlayer {
+		connections = append(connections, ws)
+	}
+	return connections
 }
 
 type Player struct {
@@ -49,154 +56,96 @@ type Position struct {
 	y float64
 }
 
-///////////////// SERVER MESSAGES /////////////////
+func NewPlayerFromMap(pData map[string]interface{}, ws *websocket.Conn) *Player {
+	posMap := pData["position"].(map[string]interface{})
+	pos := Position{
+		x: posMap["x"].(float64),
+		y: posMap["y"].(float64),
+	}
+	// fmt.Printf("pData: %v\n", pData)
+	// fmt.Printf("deserialized pos: %v\n", pos)
+	player := Player{
+		websocket: ws,
+		id:        pData["id"].(string),
+		position:  &pos,
+	}
+	return &player
+}
 
-///////////////// CLIENT MESSAGE HANDLERS /////////////////
+///////////////// SERVER MESSAGE SENDING /////////////////
 
-///////////////// CONNECTION HANDLING /////////////////
-
-func broadcast_message(connections []*websocket.Conn, message_json string) {
+func BroadcastMessage(connections []*websocket.Conn, message_json string) {
 	for _, ws := range connections {
 		ws.WriteMessage(1, []byte(message_json))
 	}
 }
 
-func handle_websocket(w http.ResponseWriter, r *http.Request) {
+///////////////// CLIENT MESSAGE HANDLING /////////////////
+
+func RouteMessage(ws *websocket.Conn, message []byte) {
+	messageTypeToHandler := map[string]func(*websocket.Conn, map[string]interface{}){
+		"CLIENT_MESSAGE_TYPE_PLAYER_ENTER":  HandlePlayerEnter,
+		"CLIENT_MESSAGE_TYPE_PLAYER_UPDATE": HandlePlayerUpdate,
+		"CLIENT_MESSAGE_TYPE_PLAYER_EXIT":   HandlePlayerExit,
+	}
+	var mData map[string]interface{}
+	if err := json.Unmarshal(message, &mData); err != nil {
+		panic(err)
+	}
+	fmt.Printf("message received: %s\n", mData)
+	messageTypeToHandler[mData["messageType"].(string)](ws, mData)
+}
+
+func HandlePlayerEnter(ws *websocket.Conn, mData map[string]interface{}) {
+	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), ws)
+	state.AddPlayer(player, ws)
+	BroadcastMessage(state.GetAllConnections(), "mock player enter")
+}
+
+func HandlePlayerUpdate(ws *websocket.Conn, mData map[string]interface{}) {
+	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), ws)
+	state.WebsocketToPlayer[ws] = player
+	BroadcastMessage(state.GetAllConnections(), "mock player update")
+}
+
+func HandlePlayerExit(ws *websocket.Conn, mData map[string]interface{}) {
+	state.RemovePlayerByWebsocket(ws)
+	BroadcastMessage(state.GetAllConnections(), "mock player exit")
+}
+
+///////////////// CONNECTION AND INCOMING MESSAGES /////////////////
+
+func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{} // use default options
-	conn, err := upgrader.Upgrade(w, r, nil)
+	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		HandlePlayerExit(ws, nil)
+		ws.Close()
+	}()
 	for {
-		mt, message, err := conn.ReadMessage()
+		// read message
+		_, message, err := ws.ReadMessage()
 		if err != nil {
 			log.Println("read:", err)
 			break
 		}
-		log.Printf("recv: %s", message)
-		err = conn.WriteMessage(mt, message)
-		if err != nil {
-			log.Println("write:", err)
-			break
-		}
+		// process message
+		RouteMessage(ws, message)
 	}
 }
 
-// func echo(w http.ResponseWriter, r *http.Request) {
-// 	upgrader := websocket.Upgrader{} // use default options
-// 	c, err := upgrader.Upgrade(w, r, nil)
-// 	if err != nil {
-// 		log.Print("upgrade:", err)
-// 		return
-// 	}
-// 	defer c.Close()
-// 	for {
-// 		mt, message, err := c.ReadMessage()
-// 		if err != nil {
-// 			log.Println("read:", err)
-// 			break
-// 		}
-// 		log.Printf("recv: %s", message)
-// 		err = c.WriteMessage(mt, message)
-// 		if err != nil {
-// 			log.Println("write:", err)
-// 			break
-// 		}
-// 	}
-// }
-
-// func home(w http.ResponseWriter, r *http.Request) {
-// 	homeTemplate.Execute(w, "ws://"+r.Host+"/echo")
-// }
+///////////////// RUN SERVER /////////////////
 
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
-	http.HandleFunc("/", handle_websocket)
-	// http.HandleFunc("/echo", echo)
-	// http.HandleFunc("/home", home)
+	http.HandleFunc("/", HandleWebsocket)
 	addr := flag.String("addr", "0.0.0.0:5000", "http service address")
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
-// var homeTemplate = template.Must(template.New("").Parse(`
-// <!DOCTYPE html>
-// <html>
-// <head>
-// <meta charset="utf-8">
-// <script>
-// window.addEventListener("load", function(evt) {
-
-//     var output = document.getElementById("output");
-//     var input = document.getElementById("input");
-//     var ws;
-
-//     var print = function(message) {
-//         var d = document.createElement("div");
-//         d.textContent = message;
-//         output.appendChild(d);
-//         output.scroll(0, output.scrollHeight);
-//     };
-
-//     document.getElementById("open").onclick = function(evt) {
-//         if (ws) {
-//             return false;
-//         }
-//         ws = new WebSocket("{{.}}");
-//         ws.onopen = function(evt) {
-//             print("OPEN");
-//         }
-//         ws.onclose = function(evt) {
-//             print("CLOSE");
-//             ws = null;
-//         }
-//         ws.onmessage = function(evt) {
-//             print("RESPONSE: " + evt.data);
-//         }
-//         ws.onerror = function(evt) {
-//             print("ERROR: " + evt.data);
-//         }
-//         return false;
-//     };
-
-//     document.getElementById("send").onclick = function(evt) {
-//         if (!ws) {
-//             return false;
-//         }
-//         print("SEND: " + input.value);
-//         ws.send(input.value);
-//         return false;
-//     };
-
-//     document.getElementById("close").onclick = function(evt) {
-//         if (!ws) {
-//             return false;
-//         }
-//         ws.close();
-//         return false;
-//     };
-
-// });
-// </script>
-// </head>
-// <body>
-// <table>
-// <tr><td valign="top" width="50%">
-// <p>Click "Open" to create a connection to the server,
-// "Send" to send a message to the server and "Close" to close the connection.
-// You can change the message and send multiple times.
-// <p>
-// <form>
-// <button id="open">Open</button>
-// <button id="close">Close</button>
-// <p><input id="input" type="text" value="Hello world!">
-// <button id="send">Send</button>
-// </form>
-// </td><td valign="top" width="50%">
-// <div id="output" style="max-height: 70vh;overflow-y: scroll;"></div>
-// </td></tr></table>
-// </body>
-// </html>
-// `))
+///////////////// UTIL FUNCTIONS /////////////////
