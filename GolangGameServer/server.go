@@ -11,13 +11,14 @@ import (
 )
 
 // TODO:
-// - add game state:
-//// - track connections
-//// - track player states
+// X add game state:
+//// X track connections
+//// X track player states
 // - add server message classes
-// - add client message handlers
-// - add routing of client messages to respective handler
-// - add ability to broadcast server message
+// - add server message instantiation and sending
+// X add client message handlers
+// X add routing of client messages to respective handler
+// X add ability to broadcast server message
 
 ///////////////// GAME STATE /////////////////
 
@@ -33,8 +34,10 @@ func (gs *GameState) AddPlayer(player *Player, ws *websocket.Conn) {
 	gs.WebsocketToPlayer[ws] = player
 }
 
-func (gs *GameState) RemovePlayerByWebsocket(ws *websocket.Conn) {
+func (gs *GameState) RemovePlayerByWebsocket(ws *websocket.Conn) *Player {
+	removedPlayer := gs.WebsocketToPlayer[ws]
 	delete(gs.WebsocketToPlayer, ws)
+	return removedPlayer
 }
 
 func (gs *GameState) GetAllConnections() []*websocket.Conn {
@@ -45,10 +48,13 @@ func (gs *GameState) GetAllConnections() []*websocket.Conn {
 	return connections
 }
 
+type GameStateJsonSerializable struct {
+	Players []*Player
+}
+
 type Player struct {
-	websocket *websocket.Conn
-	id        string
-	position  *Position
+	id       string
+	position *Position
 }
 
 type Position struct {
@@ -62,22 +68,49 @@ func NewPlayerFromMap(pData map[string]interface{}, ws *websocket.Conn) *Player 
 		x: posMap["x"].(float64),
 		y: posMap["y"].(float64),
 	}
-	// fmt.Printf("pData: %v\n", pData)
-	// fmt.Printf("deserialized pos: %v\n", pos)
 	player := Player{
-		websocket: ws,
-		id:        pData["id"].(string),
-		position:  &pos,
+		id:       pData["id"].(string),
+		position: &pos,
 	}
 	return &player
 }
 
 ///////////////// SERVER MESSAGE SENDING /////////////////
 
-func BroadcastMessage(connections []*websocket.Conn, message_json string) {
+func SendJsonMessage(ws *websocket.Conn, messageJson []byte) {
+	fmt.Printf("sending message: %v\n", string(messageJson))
+	ws.WriteMessage(1, messageJson)
+}
+
+func BroadcastMessage(connections []*websocket.Conn, messageJson []byte) {
 	for _, ws := range connections {
-		ws.WriteMessage(1, []byte(message_json))
+		SendJsonMessage(ws, messageJson)
 	}
+}
+
+func SendGameState(ws *websocket.Conn) {
+	allPlayers := make([]*Player, 0)
+	for _, player := range state.WebsocketToPlayer {
+		allPlayers = append(allPlayers, player)
+	}
+	messageData := GameStateMessage{
+		MessageType: "SERVER_MESSAGE_TYPE_GAME_STATE",
+		GameState: &GameStateJsonSerializable{
+			Players: allPlayers,
+		},
+	}
+	messageJson, _ := json.Marshal(messageData)
+	SendJsonMessage(ws, messageJson)
+}
+
+type PlayerMessage struct {
+	MessageType string
+	Player      *Player
+}
+
+type GameStateMessage struct {
+	MessageType string
+	GameState   *GameStateJsonSerializable
 }
 
 ///////////////// CLIENT MESSAGE HANDLING /////////////////
@@ -99,18 +132,33 @@ func RouteMessage(ws *websocket.Conn, message []byte) {
 func HandlePlayerEnter(ws *websocket.Conn, mData map[string]interface{}) {
 	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), ws)
 	state.AddPlayer(player, ws)
-	BroadcastMessage(state.GetAllConnections(), "mock player enter")
+	message := PlayerMessage{
+		MessageType: "SERVER_MESSAGE_TYPE_ENTER_PLAYER",
+		Player:      player,
+	}
+	serialized, _ := json.Marshal(message)
+	BroadcastMessage(state.GetAllConnections(), serialized)
 }
 
 func HandlePlayerUpdate(ws *websocket.Conn, mData map[string]interface{}) {
 	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), ws)
 	state.WebsocketToPlayer[ws] = player
-	BroadcastMessage(state.GetAllConnections(), "mock player update")
+	message := PlayerMessage{
+		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_UPDATE",
+		Player:      player,
+	}
+	serialized, _ := json.Marshal(message)
+	BroadcastMessage(state.GetAllConnections(), serialized)
 }
 
 func HandlePlayerExit(ws *websocket.Conn, mData map[string]interface{}) {
-	state.RemovePlayerByWebsocket(ws)
-	BroadcastMessage(state.GetAllConnections(), "mock player exit")
+	removedPlayer := state.RemovePlayerByWebsocket(ws)
+	message := PlayerMessage{
+		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_EXIT",
+		Player:      removedPlayer,
+	}
+	serialized, _ := json.Marshal(message)
+	BroadcastMessage(state.GetAllConnections(), serialized)
 }
 
 ///////////////// CONNECTION AND INCOMING MESSAGES /////////////////
@@ -122,6 +170,9 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		log.Print("upgrade:", err)
 		return
 	}
+	// send game state message to newly connected client
+	SendGameState(ws)
+	// do player removal from game state and websocket close on disconnect
 	defer func() {
 		HandlePlayerExit(ws, nil)
 		ws.Close()
