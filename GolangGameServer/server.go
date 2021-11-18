@@ -12,16 +12,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// TODO:
-// X add game state:
-//// X track connections
-//// X track player states
-// - add server message classes
-// - add server message instantiation and sending
-// X add client message handlers
-// X add routing of client messages to respective handler
-// X add ability to broadcast server message
-
 ///////////////// GAME STATE /////////////////
 
 var state GameState = GameState{
@@ -36,10 +26,8 @@ func (gs *GameState) AddPlayer(player *Player, ws *websocket.Conn) {
 	gs.WebsocketToPlayer[ws] = player
 }
 
-func (gs *GameState) RemovePlayerByWebsocket(ws *websocket.Conn) *Player {
-	removedPlayer := gs.WebsocketToPlayer[ws]
+func (gs *GameState) RemovePlayerByWebsocket(ws *websocket.Conn) {
 	delete(gs.WebsocketToPlayer, ws)
-	return removedPlayer
 }
 
 func (gs *GameState) GetAllConnections() []*websocket.Conn {
@@ -155,13 +143,14 @@ func HandlePlayerUpdate(ws *websocket.Conn, mData map[string]interface{}) {
 }
 
 func HandlePlayerExit(ws *websocket.Conn, mData map[string]interface{}) {
-	removedPlayer := state.RemovePlayerByWebsocket(ws)
+	playerToRemove := state.WebsocketToPlayer[ws]
 	message := PlayerMessage{
 		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_EXIT",
-		Player:      removedPlayer,
+		Player:      playerToRemove,
 	}
 	serialized, _ := json.Marshal(message)
 	BroadcastMessage(state.GetAllConnections(), serialized)
+	state.RemovePlayerByWebsocket(ws)
 }
 
 ///////////////// CONNECTION AND INCOMING MESSAGES /////////////////
