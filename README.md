@@ -58,11 +58,11 @@ making a multiplayer game with the Unity engine.
 It demonstrates game-client to game-server connection establishment, message 
 transmission, and connection termination with the websocket protocol.
 
-The entire game-server's code resides in:
-`PythonGameServer/server.py` (python server)
+The entire game-server's code resides in:  
+`PythonGameServer/server.py` (python server)  
 `GolangGameServer/server.go` (golang server)
 
-The game-client's websocket management resides in:
+The game-client's websocket management resides in:  
 `UnityWebSocketClient/Assets/Scripts/SceneManagerScript.cs`
 
 Enjoy!
