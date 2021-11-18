@@ -32,7 +32,7 @@ docker-compose -f ./GolangGameServer/docker-compose.yaml up
 2. Open the Unity editor and run the game.
 
 *The players is simply a circle you can move around with WASD. Other connected*
-*players are red and the main player is white*
+*players are red and the main player is white.*
 
 
 ### Testing Multiple Client Connections
