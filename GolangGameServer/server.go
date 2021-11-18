@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/websocket"
 )
@@ -78,8 +80,10 @@ func NewPlayerFromMap(pData map[string]interface{}, ws *websocket.Conn) *Player 
 ///////////////// SERVER MESSAGE SENDING /////////////////
 
 func SendJsonMessage(ws *websocket.Conn, messageJson []byte) {
-	fmt.Printf("sending message: %v\n", string(messageJson))
 	ws.WriteMessage(1, messageJson)
+	// log message sent
+	fmt.Println("message sent:")
+	ConsoleLogJsonByteArray(messageJson)
 }
 
 func BroadcastMessage(connections []*websocket.Conn, messageJson []byte) {
@@ -125,7 +129,6 @@ func RouteMessage(ws *websocket.Conn, message []byte) {
 	if err := json.Unmarshal(message, &mData); err != nil {
 		panic(err)
 	}
-	fmt.Printf("message received: %s\n", mData)
 	messageTypeToHandler[mData["messageType"].(string)](ws, mData)
 }
 
@@ -184,6 +187,9 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			log.Println("read:", err)
 			break
 		}
+		// log message received
+		fmt.Println("message received:")
+		ConsoleLogJsonByteArray(message)
 		// process message
 		RouteMessage(ws, message)
 	}
@@ -197,4 +203,12 @@ func main() {
 	http.HandleFunc("/", HandleWebsocket)
 	addr := flag.String("addr", "0.0.0.0:5000", "http service address")
 	log.Fatal(http.ListenAndServe(*addr, nil))
+}
+
+///////////////// HELPERS /////////////////
+
+func ConsoleLogJsonByteArray(message []byte) {
+	var out bytes.Buffer
+	json.Indent(&out, message, "", "  ")
+	out.WriteTo(os.Stdout)
 }
