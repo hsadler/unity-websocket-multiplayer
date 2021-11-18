@@ -8,6 +8,8 @@ public class SceneManagerScript : MonoBehaviour
     public GameObject playerPrefab;
 
     private WebSocket ws;
+    private string gameServerUrl = "ws://localhost:5000";
+    //private string gameServerUrl = "ws://2.tcp.ngrok.io:11820"; // example ngrok URL
 
     private Player mainPlayerModel;
     private GameObject mainPlayerGO;
@@ -63,7 +65,7 @@ public class SceneManagerScript : MonoBehaviour
     private void InitWebSocketClient()
     {
         // create websocket connection
-        this.ws = new WebSocket("ws://localhost:5000");
+        this.ws = new WebSocket(this.gameServerUrl);
         this.ws.Connect();
         // add message handler callback
         this.ws.OnMessage += this.QueueServerMessage;

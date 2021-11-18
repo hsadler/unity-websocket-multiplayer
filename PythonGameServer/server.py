@@ -152,6 +152,7 @@ async def handle_player_update(message, websocket):
     player = state.get_player_by_websocket(websocket)
     player.position = new_player_position
     websockets.broadcast(state.connections, player_update_message(player))
+    logging.info('player update: ' + json.dumps(player.to_dict()))
 
 
 ### RUN SERVER ###

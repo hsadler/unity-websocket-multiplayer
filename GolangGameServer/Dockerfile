@@ -8,4 +8,3 @@ WORKDIR /go/src/
 
 # for hot reload
 RUN go get github.com/githubnemo/CompileDaemon
-
