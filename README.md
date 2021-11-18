@@ -15,13 +15,15 @@ Golang. Their APIs are identical.
 
 ### Running Locally
 
-1. Build and spin-up the python websocket server.
+1. Build and spin-up one of the websocket servers.
+
+python
 ```sh
 docker build -t python-gameserver:latest ./PythonGameServer
 docker-compose -f ./PythonGameServer/docker-compose.yaml up
 ```
 
-1 (alternate). Or, build and spin-up the golang websocket server.
+golang
 ```sh
 docker build -t golang-gameserver:latest ./GolangGameServer
 docker-compose -f ./GolangGameServer/docker-compose.yaml up
@@ -33,11 +35,11 @@ docker-compose -f ./GolangGameServer/docker-compose.yaml up
 *players are red and the main player is white*
 
 
-### Testing By Exposing a Locally Running Server To the Internet
+### Testing Multiple Client Connections
 
 1. Build and spin-up one of the game servers locally.
 
-2. Expose with ngrok.
+2. Expose to the internet with ngrok.
 ```sh
 ngrok tcp 5000
 ```
