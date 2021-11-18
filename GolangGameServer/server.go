@@ -53,24 +53,24 @@ type GameStateJsonSerializable struct {
 }
 
 type Player struct {
-	id       string
-	position *Position
+	Id       string
+	Position *Position
 }
 
 type Position struct {
-	x float64
-	y float64
+	X float64
+	Y float64
 }
 
 func NewPlayerFromMap(pData map[string]interface{}, ws *websocket.Conn) *Player {
 	posMap := pData["position"].(map[string]interface{})
 	pos := Position{
-		x: posMap["x"].(float64),
-		y: posMap["y"].(float64),
+		X: posMap["x"].(float64),
+		Y: posMap["y"].(float64),
 	}
 	player := Player{
-		id:       pData["id"].(string),
-		position: &pos,
+		Id:       pData["id"].(string),
+		Position: &pos,
 	}
 	return &player
 }
@@ -198,5 +198,3 @@ func main() {
 	addr := flag.String("addr", "0.0.0.0:5000", "http service address")
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
-
-///////////////// UTIL FUNCTIONS /////////////////
