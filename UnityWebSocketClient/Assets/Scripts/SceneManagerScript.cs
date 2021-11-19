@@ -9,7 +9,7 @@ public class SceneManagerScript : MonoBehaviour
 
     private WebSocket ws;
     private string gameServerUrl = "ws://localhost:5000";
-    //private string gameServerUrl = "ws://2.tcp.ngrok.io:11820"; // example ngrok URL
+    //private string gameServerUrl = "ws://0.tcp.ngrok.io:16554"; // example ngrok URL
 
     private Player mainPlayerModel;
     private GameObject mainPlayerGO;

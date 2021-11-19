@@ -132,18 +132,18 @@ async def handle_player_enter(message, websocket):
     player = Player.from_dict(player_dict, websocket)
     state.add_player(player=player, websocket=websocket)
     websockets.broadcast(state.connections, enter_player_message(player))
-    logging.info('player entered: ' + json.dumps(player.to_dict()))
+    logging.info('player entered: ' + json.dumps(player.to_dict(), indent=2))
     logging.info('player count: ' + str(len(state.connections)))
-    logging.info('game state: ' + json.dumps(state.to_dict()))
+    logging.info('game state: ' + json.dumps(state.to_dict(), indent=2))
 
 async def handle_player_exit(message, websocket):
     player = state.get_player_by_websocket(websocket)
     if player is not None:
         state.remove_player(player)
         websockets.broadcast(state.connections, exit_player_message(player))
-        logging.info('player exited: ' + json.dumps(player.to_dict()))
+        logging.info('player exited: ' + json.dumps(player.to_dict(), indent=2))
         logging.info('player count: ' + str(len(state.connections)))
-        logging.info('game state: ' + json.dumps(state.to_dict()))
+        logging.info('game state: ' + json.dumps(state.to_dict(), indent=2))
     else:
         logging.warning('player not found by websocket id: ' + str(websocket.id))
 
@@ -152,7 +152,7 @@ async def handle_player_update(message, websocket):
     player = state.get_player_by_websocket(websocket)
     player.position = new_player_position
     websockets.broadcast(state.connections, player_update_message(player))
-    logging.info('player update: ' + json.dumps(player.to_dict()))
+    logging.info('player update: ' + json.dumps(player.to_dict(), indent=2))
 
 
 ### RUN SERVER ###
@@ -173,7 +173,7 @@ async def main():
     async with websockets.serve(
 		handle_websocket,
 		host="0.0.0.0", 
-		port=5000, 
+		port=5000,
 		logger=LoggerAdapter(logging.getLogger("websockets.server"))
 	):
         await asyncio.Future()
