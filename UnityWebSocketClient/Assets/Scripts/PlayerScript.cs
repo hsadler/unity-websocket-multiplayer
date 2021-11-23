@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerScript : MonoBehaviour
@@ -8,6 +9,15 @@ public class PlayerScript : MonoBehaviour
 
     private float moveSpeed = 5f;
 
+    // autopilot movement for testing
+    private List<Vector3> moveDirections = new List<Vector3> {
+        Vector3.up,
+        Vector3.right,
+        Vector3.down,
+        Vector3.left
+    };
+    private int currMoveDirIndex = 0;
+
     // UNITY HOOKS
 
     void Start()
@@ -16,6 +26,8 @@ public class PlayerScript : MonoBehaviour
         {
             this.gameObject.GetComponent<SpriteRenderer>().color = Color.red;
         }
+        // autopilot movement for testing
+        InvokeRepeating("SetNextMoveDirectionIndex", 0f, 1f);
     }
 
     void Update()
@@ -31,25 +43,31 @@ public class PlayerScript : MonoBehaviour
     private void HandleMovement()
     {
         var targetPos = this.transform.position;
-        // left
-        if (Input.GetKey(KeyCode.A))
+        if (Input.anyKey)
         {
-            targetPos += Vector3.left;
+            // left
+            if (Input.GetKey(KeyCode.A))
+            {
+                targetPos += Vector3.left;
+            }
+            // right
+            if (Input.GetKey(KeyCode.D))
+            {
+                targetPos += Vector3.right;
+            }
+            // up
+            if (Input.GetKey(KeyCode.W))
+            {
+                targetPos += Vector3.up;
+            }
+            // down
+            if (Input.GetKey(KeyCode.S))
+            {
+                targetPos += Vector3.down;
+            }
         }
-        // right
-        if (Input.GetKey(KeyCode.D))
-        {
-            targetPos += Vector3.right;
-        }
-        // up
-        if (Input.GetKey(KeyCode.W))
-        {
-            targetPos += Vector3.up;
-        }
-        // down
-        if (Input.GetKey(KeyCode.S))
-        {
-            targetPos += Vector3.down;
+        else {
+            targetPos += this.moveDirections[this.currMoveDirIndex];
         }
         if (targetPos != this.transform.position)
         {
@@ -59,6 +77,17 @@ public class PlayerScript : MonoBehaviour
                 Time.deltaTime * this.moveSpeed
             );
             this.sceneManager.SyncPlayerState(this.gameObject);
+        }
+    }
+
+    // autopilot movement for testing
+    private void SetNextMoveDirectionIndex() {
+        if (this.currMoveDirIndex == 3)
+        {
+            this.currMoveDirIndex = 0;
+        }
+        else {
+            this.currMoveDirIndex += 1;
         }
     }
 
