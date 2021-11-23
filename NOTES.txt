@@ -8,6 +8,8 @@ TODO:
     X implement game-client handling of game-server messages
     X fix bugs
     X poc syncing game state for players to see each others positions
+    - refactor golang game-server to properly manage multiple websocket 
+        connections
 
 
 Game State Schema:

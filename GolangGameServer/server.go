@@ -39,17 +39,17 @@ func (gs *GameState) GetAllConnections() []*websocket.Conn {
 }
 
 type GameStateJsonSerializable struct {
-	Players []*Player
+	Players []*Player `json:"players"`
 }
 
 type Player struct {
-	Id       string
-	Position *Position
+	Id       string    `json:"id"`
+	Position *Position `json:"position"`
 }
 
 type Position struct {
-	X float64
-	Y float64
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 func NewPlayerFromMap(pData map[string]interface{}, ws *websocket.Conn) *Player {
@@ -96,13 +96,13 @@ func SendGameState(ws *websocket.Conn) {
 }
 
 type PlayerMessage struct {
-	MessageType string
-	Player      *Player
+	MessageType string  `json:"messageType"`
+	Player      *Player `json:"player"`
 }
 
 type GameStateMessage struct {
-	MessageType string
-	GameState   *GameStateJsonSerializable
+	MessageType string                     `json:"messageType"`
+	GameState   *GameStateJsonSerializable `json:"gameState"`
 }
 
 ///////////////// CLIENT MESSAGE HANDLING /////////////////
@@ -191,7 +191,10 @@ func main() {
 	log.SetFlags(0)
 	http.HandleFunc("/", HandleWebsocket)
 	addr := flag.String("addr", "0.0.0.0:5000", "http service address")
-	log.Fatal(http.ListenAndServe(*addr, nil))
+	err := http.ListenAndServe(*addr, nil)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
 
 ///////////////// HELPERS /////////////////
