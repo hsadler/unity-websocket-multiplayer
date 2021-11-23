@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -16,18 +17,28 @@ import (
 
 var state GameState = GameState{
 	WebsocketToPlayer: make(map[*websocket.Conn]*Player),
+	WebsocketToMutex:  make(map[*websocket.Conn]*sync.Mutex),
+	Mu:                &sync.Mutex{},
 }
 
 type GameState struct {
 	WebsocketToPlayer map[*websocket.Conn]*Player
+	WebsocketToMutex  map[*websocket.Conn]*sync.Mutex
+	Mu                *sync.Mutex
 }
 
-func (gs *GameState) AddPlayer(player *Player, ws *websocket.Conn) {
+func (gs *GameState) AddPlayer(player *Player, ws *websocket.Conn, mu *sync.Mutex) {
+	gs.Mu.Lock()
+	defer gs.Mu.Unlock()
 	gs.WebsocketToPlayer[ws] = player
+	gs.WebsocketToMutex[ws] = mu
 }
 
 func (gs *GameState) RemovePlayerByWebsocket(ws *websocket.Conn) {
+	gs.Mu.Lock()
+	defer gs.Mu.Unlock()
 	delete(gs.WebsocketToPlayer, ws)
+	delete(gs.WebsocketToMutex, ws)
 }
 
 func (gs *GameState) GetAllConnections() []*websocket.Conn {
@@ -68,8 +79,13 @@ func NewPlayerFromMap(pData map[string]interface{}, ws *websocket.Conn) *Player 
 ///////////////// SERVER MESSAGE SENDING /////////////////
 
 func SendJsonMessage(ws *websocket.Conn, messageJson []byte) {
+	mu := state.WebsocketToMutex[ws]
+	if mu != nil {
+		mu.Lock()
+		defer mu.Unlock()
+	}
 	ws.WriteMessage(1, messageJson)
-	// log message sent
+	// log that message was sent
 	fmt.Println("message sent:")
 	ConsoleLogJsonByteArray(messageJson)
 }
@@ -122,9 +138,10 @@ func RouteMessage(ws *websocket.Conn, message []byte) {
 
 func HandlePlayerEnter(ws *websocket.Conn, mData map[string]interface{}) {
 	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), ws)
-	state.AddPlayer(player, ws)
+	var mu sync.Mutex
+	state.AddPlayer(player, ws, &mu)
 	message := PlayerMessage{
-		MessageType: "SERVER_MESSAGE_TYPE_ENTER_PLAYER",
+		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_ENTER",
 		Player:      player,
 	}
 	serialized, _ := json.Marshal(message)
@@ -132,6 +149,8 @@ func HandlePlayerEnter(ws *websocket.Conn, mData map[string]interface{}) {
 }
 
 func HandlePlayerUpdate(ws *websocket.Conn, mData map[string]interface{}) {
+	state.Mu.Lock()
+	defer state.Mu.Unlock()
 	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), ws)
 	state.WebsocketToPlayer[ws] = player
 	message := PlayerMessage{
@@ -164,24 +183,26 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 	// send game state message to newly connected client
 	SendGameState(ws)
-	// do player removal from game state and websocket close on disconnect
-	defer func() {
-		HandlePlayerExit(ws, nil)
-		ws.Close()
-	}()
-	for {
-		// read message
-		_, message, err := ws.ReadMessage()
-		if err != nil {
-			log.Println("read:", err)
-			break
+	go func() {
+		// do player removal from game state and websocket close on disconnect
+		defer func() {
+			HandlePlayerExit(ws, nil)
+			ws.Close()
+		}()
+		for {
+			// read message
+			_, message, err := ws.ReadMessage()
+			if err != nil {
+				log.Println("read:", err)
+				break
+			}
+			// log message received
+			fmt.Println("message received:")
+			ConsoleLogJsonByteArray(message)
+			// process message
+			RouteMessage(ws, message)
 		}
-		// log message received
-		fmt.Println("message received:")
-		ConsoleLogJsonByteArray(message)
-		// process message
-		RouteMessage(ws, message)
-	}
+	}()
 }
 
 ///////////////// RUN SERVER /////////////////

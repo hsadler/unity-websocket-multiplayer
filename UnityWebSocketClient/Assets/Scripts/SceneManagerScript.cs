@@ -151,7 +151,6 @@ public class SceneManagerScript : MonoBehaviour
 
     private void HandleGameStateServerMessage(string messageJSON)
     {
-        //Debug.Log("HandleGameStateServerMessage()...");
         var gameStateMessage = JsonUtility.FromJson<ServerMessageGameState>(messageJSON);
         foreach (Player player in gameStateMessage.gameState.players) 
         {

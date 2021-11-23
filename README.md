@@ -5,8 +5,6 @@ POC for a Unity game client and game server with websockets!
 There are 2 implementations of the game server. One in Python and one in 
 Golang. Their APIs are identical.
 
-## !!! THE GOLANG SERVER OPTION IS CURRENTLY BROKEN !!!
-
 
 ### Requirements
 - Unity Editor: `version 2020.3.21f1`

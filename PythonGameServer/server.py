@@ -80,21 +80,21 @@ state = GameState()
 
 ### SERVER MESSAGES ###
 
-SERVER_MESSAGE_TYPE_ENTER_PLAYER = 'SERVER_MESSAGE_TYPE_PLAYER_ENTER'
-SERVER_MESSAGE_TYPE_EXIT_PLAYER = 'SERVER_MESSAGE_TYPE_PLAYER_EXIT'
+SERVER_MESSAGE_TYPE_PLAYER_ENTER = 'SERVER_MESSAGE_TYPE_PLAYER_ENTER'
+SERVER_MESSAGE_TYPE_PLAYER_EXIT = 'SERVER_MESSAGE_TYPE_PLAYER_EXIT'
 SERVER_MESSAGE_TYPE_PLAYER_UPDATE = 'SERVER_MESSAGE_TYPE_PLAYER_UPDATE'
 SERVER_MESSAGE_TYPE_GAME_STATE = 'SERVER_MESSAGE_TYPE_GAME_STATE'
 
 def enter_player_message(player):
     json_payload = json.dumps({
-        'messageType': SERVER_MESSAGE_TYPE_ENTER_PLAYER,
+        'messageType': SERVER_MESSAGE_TYPE_PLAYER_ENTER,
         'player': player.to_dict()
     })
     return json_payload
 
 def exit_player_message(player):
     return json.dumps({
-        'messageType': SERVER_MESSAGE_TYPE_EXIT_PLAYER,
+        'messageType': SERVER_MESSAGE_TYPE_PLAYER_EXIT,
         'player': player.to_dict()
     })
 
