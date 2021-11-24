@@ -7,6 +7,10 @@ public class PlayerScript : MonoBehaviour
     public SceneManagerScript sceneManager;
     public bool isMainPlayer;
 
+    // use for testing if you want to connect multiple players to the server and
+    // see them moving
+    public bool autopilotOn = false;
+
     private float moveSpeed = 5f;
 
     // autopilot movement for testing
@@ -66,7 +70,7 @@ public class PlayerScript : MonoBehaviour
                 targetPos += Vector3.down;
             }
         }
-        else {
+        else if(this.autopilotOn) {
             targetPos += this.moveDirections[this.currMoveDirIndex];
         }
         if (targetPos != this.transform.position)
