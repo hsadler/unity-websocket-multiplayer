@@ -24,15 +24,18 @@ class LoggerAdapter(logging.LoggerAdapter):
 ### GAME STATE ###
 
 class GameState():
-    def __init__(self):
+    def __init__(self, game_state_lock):
+        self.game_state_lock = game_state_lock
         self.connections = set()
         self.players = set()
-    def add_player(self, player, websocket):
-        self.players.add(player)
-        self.connections.add(websocket)
-    def remove_player(self, player):
-        self.connections.remove(player.websocket)
-        self.players.remove(player)
+    async def add_player(self, player, websocket):
+        async with self.game_state_lock:
+            self.players.add(player)
+            self.connections.add(websocket)
+    async def remove_player(self, player):
+        async with self.game_state_lock:
+            self.connections.remove(player.websocket)
+            self.players.remove(player)
     def get_player_by_websocket(self, websocket):
         for player in self.players:
             if player.websocket is websocket:
@@ -75,7 +78,7 @@ class Position():
             'y': self.y
         }
 
-state = GameState()
+game_state = GameState(game_state_lock=asyncio.Lock())
 
 
 ### SERVER MESSAGES ###
@@ -107,7 +110,7 @@ def player_update_message(player):
 def game_state_message(state):
     return json.dumps({
         'messageType': SERVER_MESSAGE_TYPE_GAME_STATE,
-        'gameState': state.to_dict()
+        'gameState': game_state.to_dict()
     })
 
 
@@ -130,28 +133,29 @@ async def route_message(message, websocket):
 async def handle_player_enter(message, websocket):
     player_dict = message['player']
     player = Player.from_dict(player_dict, websocket)
-    state.add_player(player=player, websocket=websocket)
-    websockets.broadcast(state.connections, enter_player_message(player))
+    await game_state.add_player(player=player, websocket=websocket)
+    websockets.broadcast(game_state.connections, enter_player_message(player))
     logging.info('player entered: ' + json.dumps(player.to_dict(), indent=2))
-    logging.info('player count: ' + str(len(state.connections)))
-    logging.info('game state: ' + json.dumps(state.to_dict(), indent=2))
+    logging.info('player count: ' + str(len(game_state.connections)))
+    logging.info('game state: ' + json.dumps(game_state.to_dict(), indent=2))
 
 async def handle_player_exit(message, websocket):
-    player = state.get_player_by_websocket(websocket)
+    player = game_state.get_player_by_websocket(websocket)
     if player is not None:
-        state.remove_player(player)
-        websockets.broadcast(state.connections, exit_player_message(player))
+        await game_state.remove_player(player)
+        websockets.broadcast(game_state.connections, exit_player_message(player))
         logging.info('player exited: ' + json.dumps(player.to_dict(), indent=2))
-        logging.info('player count: ' + str(len(state.connections)))
-        logging.info('game state: ' + json.dumps(state.to_dict(), indent=2))
+        logging.info('player count: ' + str(len(game_state.connections)))
+        logging.info('game state: ' + json.dumps(game_state.to_dict(), indent=2))
     else:
         logging.warning('player not found by websocket id: ' + str(websocket.id))
 
 async def handle_player_update(message, websocket):
     new_player_position = Position.from_dict(message['player']['position'])
-    player = state.get_player_by_websocket(websocket)
-    player.position = new_player_position
-    websockets.broadcast(state.connections, player_update_message(player))
+    player = game_state.get_player_by_websocket(websocket)
+    async with game_state.game_state_lock:
+        player.position = new_player_position
+    websockets.broadcast(game_state.connections, player_update_message(player))
     logging.info('player update: ' + json.dumps(player.to_dict(), indent=2))
 
 
@@ -160,7 +164,7 @@ async def handle_player_update(message, websocket):
 async def handle_websocket(websocket, path):
     try:
         # sync server game state to newly connected game client
-        await websocket.send(game_state_message(state))
+        await websocket.send(game_state_message(game_state))
         # route and handle messages for duration of websocket connection
         async for message in websocket:
             await route_message(message, websocket)
