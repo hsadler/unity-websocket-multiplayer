@@ -10,6 +10,7 @@ TODO:
     X poc syncing game state for players to see each others positions
     X refactor golang game-server to properly manage multiple websocket 
         connections
+    - add shared resource mutex to python server global game state updates
     - refactor golang server to use channels instead of mutexes
 
 
