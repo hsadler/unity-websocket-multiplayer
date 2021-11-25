@@ -8,50 +8,161 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync"
 
 	"github.com/gorilla/websocket"
 )
 
-///////////////// GAME STATE /////////////////
+///////////////// HUB /////////////////
 
-var state GameState = GameState{
-	WebsocketToPlayer: make(map[*websocket.Conn]*Player),
-	WebsocketToMutex:  make(map[*websocket.Conn]*sync.Mutex),
-	Mu:                &sync.Mutex{},
+type Hub struct {
+	Clients   map[*Client]bool
+	Add       chan *Client
+	Remove    chan *Client
+	Broadcast chan []byte
 }
 
-type GameState struct {
-	WebsocketToPlayer map[*websocket.Conn]*Player
-	WebsocketToMutex  map[*websocket.Conn]*sync.Mutex
-	Mu                *sync.Mutex
-}
-
-func (gs *GameState) AddPlayer(player *Player, ws *websocket.Conn, mu *sync.Mutex) {
-	gs.Mu.Lock()
-	defer gs.Mu.Unlock()
-	gs.WebsocketToPlayer[ws] = player
-	gs.WebsocketToMutex[ws] = mu
-}
-
-func (gs *GameState) RemovePlayerByWebsocket(ws *websocket.Conn) {
-	gs.Mu.Lock()
-	defer gs.Mu.Unlock()
-	delete(gs.WebsocketToPlayer, ws)
-	delete(gs.WebsocketToMutex, ws)
-}
-
-func (gs *GameState) GetAllConnections() []*websocket.Conn {
-	var connections []*websocket.Conn
-	for ws := range gs.WebsocketToPlayer {
-		connections = append(connections, ws)
+func (h *Hub) Run() {
+	for {
+		select {
+		case client := <-h.Add:
+			fmt.Println("adding client from hub")
+			h.Clients[client] = true
+		case client := <-h.Remove:
+			fmt.Println("removing client from hub")
+			delete(h.Clients, client)
+			client.Destroy()
+		case message := <-h.Broadcast:
+			for c := range h.Clients {
+				c.Send <- message
+			}
+		default:
+			// fmt.Println("nothing for hub to process...")
+		}
 	}
-	return connections
 }
 
-type GameStateJsonSerializable struct {
-	Players []*Player `json:"players"`
+func NewHub() *Hub {
+	return &Hub{
+		Clients:   make(map[*Client]bool),
+		Add:       make(chan *Client),
+		Remove:    make(chan *Client),
+		Broadcast: make(chan []byte),
+	}
 }
+
+///////////////// CLIENT /////////////////
+
+type Client struct {
+	Hub    *Hub
+	Ws     *websocket.Conn
+	Player *Player
+	Send   chan []byte
+}
+
+func (cl *Client) RecieveMessages() {
+	// initialize client's game state by sending server's entire state
+	cl.SendGameState()
+	// do player removal from game state and websocket close on disconnect
+	defer func() {
+		fmt.Println("RecieveMessages goroutine stopping")
+		cl.HandlePlayerExit(nil)
+		cl.Ws.Close()
+	}()
+	for {
+		// read message
+		_, message, err := cl.Ws.ReadMessage()
+		if err != nil {
+			log.Println("read:", err)
+			break
+		}
+		// log message received
+		fmt.Println("message received:")
+		ConsoleLogJsonByteArray(message)
+		// route message to handler
+		messageTypeToHandler := map[string]func(map[string]interface{}){
+			"CLIENT_MESSAGE_TYPE_PLAYER_ENTER":  cl.HandlePlayerEnter,
+			"CLIENT_MESSAGE_TYPE_PLAYER_UPDATE": cl.HandlePlayerUpdate,
+			"CLIENT_MESSAGE_TYPE_PLAYER_EXIT":   cl.HandlePlayerExit,
+		}
+		var mData map[string]interface{}
+		if err := json.Unmarshal(message, &mData); err != nil {
+			panic(err)
+		}
+		// process message with handler
+		messageTypeToHandler[mData["messageType"].(string)](mData)
+	}
+}
+
+func (cl *Client) SendGameState() {
+	allPlayers := make([]*Player, 0)
+	for client := range cl.Hub.Clients {
+		allPlayers = append(allPlayers, client.Player)
+	}
+	messageData := GameStateMessage{
+		MessageType: "SERVER_MESSAGE_TYPE_GAME_STATE",
+		GameState: &GameStateJsonSerializable{
+			Players: allPlayers,
+		},
+	}
+	serialized, _ := json.Marshal(messageData)
+	cl.Send <- serialized
+}
+
+func (cl *Client) HandlePlayerEnter(mData map[string]interface{}) {
+	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), cl.Ws)
+	cl.Player = player
+	message := PlayerMessage{
+		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_ENTER",
+		Player:      player,
+	}
+	serialized, _ := json.Marshal(message)
+	cl.Hub.Broadcast <- serialized
+}
+
+func (cl *Client) HandlePlayerUpdate(mData map[string]interface{}) {
+	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), cl.Ws)
+	cl.Player = player
+	message := PlayerMessage{
+		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_UPDATE",
+		Player:      player,
+	}
+	serialized, _ := json.Marshal(message)
+	cl.Hub.Broadcast <- serialized
+}
+
+func (cl *Client) HandlePlayerExit(mData map[string]interface{}) {
+	message := PlayerMessage{
+		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_EXIT",
+		Player:      cl.Player,
+	}
+	serialized, _ := json.Marshal(message)
+	cl.Hub.Broadcast <- serialized
+	cl.Hub.Remove <- cl
+}
+
+func (cl *Client) SendMessages() {
+	defer func() {
+		fmt.Println("SendMessages goroutine stopping")
+	}()
+	for {
+		select {
+		case message, ok := <-cl.Send:
+			if !ok {
+				return
+			}
+			SendJsonMessage(cl.Ws, message)
+		default:
+			// fmt.Println("no message to send...")
+		}
+	}
+}
+
+func (cl *Client) Destroy() {
+	fmt.Println("closing client send channel")
+	close(cl.Send)
+}
+
+///////////////// PLAYER /////////////////
 
 type Player struct {
 	Id       string    `json:"id"`
@@ -79,36 +190,10 @@ func NewPlayerFromMap(pData map[string]interface{}, ws *websocket.Conn) *Player 
 ///////////////// SERVER MESSAGE SENDING /////////////////
 
 func SendJsonMessage(ws *websocket.Conn, messageJson []byte) {
-	mu := state.WebsocketToMutex[ws]
-	if mu != nil {
-		mu.Lock()
-		defer mu.Unlock()
-	}
 	ws.WriteMessage(1, messageJson)
 	// log that message was sent
 	fmt.Println("message sent:")
 	ConsoleLogJsonByteArray(messageJson)
-}
-
-func BroadcastMessage(connections []*websocket.Conn, messageJson []byte) {
-	for _, ws := range connections {
-		SendJsonMessage(ws, messageJson)
-	}
-}
-
-func SendGameState(ws *websocket.Conn) {
-	allPlayers := make([]*Player, 0)
-	for _, player := range state.WebsocketToPlayer {
-		allPlayers = append(allPlayers, player)
-	}
-	messageData := GameStateMessage{
-		MessageType: "SERVER_MESSAGE_TYPE_GAME_STATE",
-		GameState: &GameStateJsonSerializable{
-			Players: allPlayers,
-		},
-	}
-	messageJson, _ := json.Marshal(messageData)
-	SendJsonMessage(ws, messageJson)
 }
 
 type PlayerMessage struct {
@@ -116,93 +201,13 @@ type PlayerMessage struct {
 	Player      *Player `json:"player"`
 }
 
+type GameStateJsonSerializable struct {
+	Players []*Player `json:"players"`
+}
+
 type GameStateMessage struct {
 	MessageType string                     `json:"messageType"`
 	GameState   *GameStateJsonSerializable `json:"gameState"`
-}
-
-///////////////// CLIENT MESSAGE HANDLING /////////////////
-
-func RouteMessage(ws *websocket.Conn, message []byte) {
-	messageTypeToHandler := map[string]func(*websocket.Conn, map[string]interface{}){
-		"CLIENT_MESSAGE_TYPE_PLAYER_ENTER":  HandlePlayerEnter,
-		"CLIENT_MESSAGE_TYPE_PLAYER_UPDATE": HandlePlayerUpdate,
-		"CLIENT_MESSAGE_TYPE_PLAYER_EXIT":   HandlePlayerExit,
-	}
-	var mData map[string]interface{}
-	if err := json.Unmarshal(message, &mData); err != nil {
-		panic(err)
-	}
-	messageTypeToHandler[mData["messageType"].(string)](ws, mData)
-}
-
-func HandlePlayerEnter(ws *websocket.Conn, mData map[string]interface{}) {
-	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), ws)
-	var mu sync.Mutex
-	state.AddPlayer(player, ws, &mu)
-	message := PlayerMessage{
-		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_ENTER",
-		Player:      player,
-	}
-	serialized, _ := json.Marshal(message)
-	BroadcastMessage(state.GetAllConnections(), serialized)
-}
-
-func HandlePlayerUpdate(ws *websocket.Conn, mData map[string]interface{}) {
-	state.Mu.Lock()
-	defer state.Mu.Unlock()
-	player := NewPlayerFromMap(mData["player"].(map[string]interface{}), ws)
-	state.WebsocketToPlayer[ws] = player
-	message := PlayerMessage{
-		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_UPDATE",
-		Player:      player,
-	}
-	serialized, _ := json.Marshal(message)
-	BroadcastMessage(state.GetAllConnections(), serialized)
-}
-
-func HandlePlayerExit(ws *websocket.Conn, mData map[string]interface{}) {
-	playerToRemove := state.WebsocketToPlayer[ws]
-	message := PlayerMessage{
-		MessageType: "SERVER_MESSAGE_TYPE_PLAYER_EXIT",
-		Player:      playerToRemove,
-	}
-	serialized, _ := json.Marshal(message)
-	BroadcastMessage(state.GetAllConnections(), serialized)
-	state.RemovePlayerByWebsocket(ws)
-}
-
-///////////////// CONNECTION AND INCOMING MESSAGES /////////////////
-
-func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
-	upgrader := websocket.Upgrader{} // use default options
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-	// send game state message to newly connected client
-	SendGameState(ws)
-	go func() {
-		// do player removal from game state and websocket close on disconnect
-		defer func() {
-			HandlePlayerExit(ws, nil)
-			ws.Close()
-		}()
-		for {
-			// read message
-			_, message, err := ws.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				break
-			}
-			// log message received
-			fmt.Println("message received:")
-			ConsoleLogJsonByteArray(message)
-			// process message
-			RouteMessage(ws, message)
-		}
-	}()
 }
 
 ///////////////// RUN SERVER /////////////////
@@ -210,7 +215,27 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
-	http.HandleFunc("/", HandleWebsocket)
+	// create and run hub singleton
+	h := NewHub()
+	go h.Run()
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{} // use default options
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Print("upgrade:", err)
+			return
+		}
+		// create client, run processes, and add to hub
+		cl := &Client{
+			Hub:    h,
+			Ws:     ws,
+			Player: nil,
+			Send:   make(chan []byte, 256),
+		}
+		go cl.RecieveMessages()
+		go cl.SendMessages()
+		h.Add <- cl
+	})
 	addr := flag.String("addr", "0.0.0.0:5000", "http service address")
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
