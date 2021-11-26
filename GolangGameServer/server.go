@@ -30,7 +30,7 @@ func (h *Hub) Run() {
 		case client := <-h.Remove:
 			fmt.Println("removing client from hub")
 			delete(h.Clients, client)
-			client.Destroy()
+			client.Cleanup()
 		case message := <-h.Broadcast:
 			for c := range h.Clients {
 				c.Send <- message
@@ -64,7 +64,7 @@ func (cl *Client) RecieveMessages() {
 	cl.SendGameState()
 	// do player removal from game state and websocket close on disconnect
 	defer func() {
-		fmt.Println("RecieveMessages goroutine stopping")
+		fmt.Println("Client.RecieveMessages() goroutine stopping")
 		cl.HandlePlayerExit(nil)
 		cl.Ws.Close()
 	}()
@@ -76,7 +76,7 @@ func (cl *Client) RecieveMessages() {
 			break
 		}
 		// log message received
-		fmt.Println("message received:")
+		fmt.Println("client message received:")
 		ConsoleLogJsonByteArray(message)
 		// route message to handler
 		messageTypeToHandler := map[string]func(map[string]interface{}){
@@ -96,7 +96,9 @@ func (cl *Client) RecieveMessages() {
 func (cl *Client) SendGameState() {
 	allPlayers := make([]*Player, 0)
 	for client := range cl.Hub.Clients {
-		allPlayers = append(allPlayers, client.Player)
+		if client.Player != nil {
+			allPlayers = append(allPlayers, client.Player)
+		}
 	}
 	messageData := GameStateMessage{
 		MessageType: "SERVER_MESSAGE_TYPE_GAME_STATE",
@@ -142,7 +144,7 @@ func (cl *Client) HandlePlayerExit(mData map[string]interface{}) {
 
 func (cl *Client) SendMessages() {
 	defer func() {
-		fmt.Println("SendMessages goroutine stopping")
+		fmt.Println("Client.SendMessages() goroutine stopping")
 	}()
 	for {
 		select {
@@ -157,8 +159,7 @@ func (cl *Client) SendMessages() {
 	}
 }
 
-func (cl *Client) Destroy() {
-	fmt.Println("closing client send channel")
+func (cl *Client) Cleanup() {
 	close(cl.Send)
 }
 
@@ -192,7 +193,7 @@ func NewPlayerFromMap(pData map[string]interface{}, ws *websocket.Conn) *Player 
 func SendJsonMessage(ws *websocket.Conn, messageJson []byte) {
 	ws.WriteMessage(1, messageJson)
 	// log that message was sent
-	fmt.Println("message sent:")
+	fmt.Println("server message sent:")
 	ConsoleLogJsonByteArray(messageJson)
 }
 
