@@ -3,7 +3,7 @@
 POC for a Unity game client and game server with websockets!
 
 There are 2 implementations of the game server. One in Python and one in 
-Golang. Their APIs are identical.
+Golang. The APIs for both servers are identical.
 
 
 ### Requirements
@@ -64,5 +64,7 @@ The entire game-server's code resides in:
 
 The game-client's websocket management resides in:  
 `UnityWebSocketClient/Assets/Scripts/SceneManagerScript.cs`
+
+The Golang game server's architecture is inspired by [this](https://github.com/gorilla/websocket/tree/master/examples/chat) chat example.
 
 Enjoy!

@@ -1,37 +1,20 @@
 
-TODO: 
-    X add web socket client to game
-    X add web socket server to server
-    X POC communication
-    X decide how to model the game state
-    X move game-client websocket handling to scene manager
-    X implement game-client handling of game-server messages
-    X fix bugs
-    X poc syncing game state for players to see each others positions
-    X refactor golang game-server to properly manage multiple websocket 
-        connections
-    X add shared resource mutex to python server global game state updates
-    X refactor golang server to use channels instead of mutexes
-    X fix go-server bug where newly connected clients aren't initialized with 
-        the server game state properly (player value was nil in some cases)
-
-
-Game State Schema:
-{
-    players: [
-        {
-            id: <UUID_str>
-            position: {
-                x: <float>,
-                y: <float>
-            }
-        }, ...
-    ]
-}
-
-
 Message Schema:
 {
     messageType: <string>,
     payload_key <string>: payload_value <any>
+}
+
+Game State Schema:
+{
+    players: [<Player>, ...]
+}
+
+Player Schema:
+{
+    id: <UUID_str>,
+    position: {
+        x: <float>,
+        y: <float>
+    }
 }

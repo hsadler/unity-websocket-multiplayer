@@ -27,9 +27,3 @@ public class ClientMessagePlayerUpdate
     }
 
 }
-
-[Serializable]
-public class ClientMessageGetGameState
-{
-    public string messageType = "CLIENT_MESSAGE_TYPE_GET_GAME_STATE";
-}
