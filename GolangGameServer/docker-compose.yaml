@@ -13,4 +13,4 @@ services:
       - "5000:5000"
     volumes:
       - ./:/go/src
-    command: 'CompileDaemon --build="go build server.go" --command=./server'
+    command: 'CompileDaemon --build="go build" --command=./server'

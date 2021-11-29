@@ -1,4 +1,4 @@
-module golang_gameserver
+module server
 
 go 1.17
 
