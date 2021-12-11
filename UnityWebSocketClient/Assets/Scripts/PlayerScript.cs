@@ -70,7 +70,8 @@ public class PlayerScript : MonoBehaviour
                 targetPos += Vector3.down;
             }
         }
-        else if(this.autopilotOn) {
+        else if (this.autopilotOn)
+        {
             targetPos += this.moveDirections[this.currMoveDirIndex];
         }
         if (targetPos != this.transform.position)
@@ -85,12 +86,14 @@ public class PlayerScript : MonoBehaviour
     }
 
     // autopilot movement for testing
-    private void SetNextMoveDirectionIndex() {
+    private void SetNextMoveDirectionIndex()
+    {
         if (this.currMoveDirIndex == 3)
         {
             this.currMoveDirIndex = 0;
         }
-        else {
+        else
+        {
             this.currMoveDirIndex += 1;
         }
     }
