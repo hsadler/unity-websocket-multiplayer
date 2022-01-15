@@ -35,7 +35,7 @@ public class SceneManagerScript : MonoBehaviour
     private void Update()
     {
         // process all queued server messages
-        while (this.gameServerMessageQueue.Count > 0) 
+        while (this.gameServerMessageQueue.Count > 0)
         {
             this.HandleServerMessage(this.gameServerMessageQueue.Dequeue());
         }
@@ -88,7 +88,7 @@ public class SceneManagerScript : MonoBehaviour
         this.ws.Send(JsonUtility.ToJson(playerEnterMessage));
     }
 
-    private void QueueServerMessage(object sender, MessageEventArgs e) 
+    private void QueueServerMessage(object sender, MessageEventArgs e)
     {
         Debug.Log("Server message received: " + e.Data);
         this.gameServerMessageQueue.Enqueue(e.Data);
@@ -127,7 +127,7 @@ public class SceneManagerScript : MonoBehaviour
     {
         var playerExitMessage = JsonUtility.FromJson<ServerMessagePlayerExit>(messageJSON);
         string playerId = playerExitMessage.player.id;
-        if (this.playerIdToOtherPlayerGO.ContainsKey(playerId)) 
+        if (this.playerIdToOtherPlayerGO.ContainsKey(playerId))
         {
             Object.Destroy(this.playerIdToOtherPlayerGO[playerId]);
             this.playerIdToOtherPlayerGO.Remove(playerId);
@@ -152,9 +152,9 @@ public class SceneManagerScript : MonoBehaviour
     private void HandleGameStateServerMessage(string messageJSON)
     {
         var gameStateMessage = JsonUtility.FromJson<ServerMessageGameState>(messageJSON);
-        foreach (Player player in gameStateMessage.gameState.players) 
+        foreach (Player player in gameStateMessage.gameState.players)
         {
-            this.AddOtherPlayerFromPlayerModel(player);   
+            this.AddOtherPlayerFromPlayerModel(player);
         }
     }
 
