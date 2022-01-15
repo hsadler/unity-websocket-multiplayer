@@ -35,8 +35,6 @@ func (h *Hub) Run() {
 			for c := range h.Clients {
 				c.Send <- message
 			}
-		default:
-			// fmt.Println("nothing for hub to process...")
 		}
 	}
 }
@@ -146,16 +144,8 @@ func (cl *Client) SendMessages() {
 	defer func() {
 		fmt.Println("Client.SendMessages() goroutine stopping")
 	}()
-	for {
-		select {
-		case message, ok := <-cl.Send:
-			if !ok {
-				return
-			}
-			SendJsonMessage(cl.Ws, message)
-		default:
-			// fmt.Println("no message to send...")
-		}
+	for message := range cl.Send {
+		SendJsonMessage(cl.Ws, message)
 	}
 }
 
